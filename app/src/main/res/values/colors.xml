@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 蔚蓝档案主题色 (MD3) -->
+    <color name="primary">#1E88E5</color>
+    <color name="primary_variant">#1565C0</color>
+    <color name="on_primary">#FFFFFF</color>
+    
+    <color name="secondary">#42A5F5</color>
+    <color name="secondary_variant">#1976D2</color>
+    <color name="on_secondary">#FFFFFF</color>
+    
+    <color name="tertiary">#7E57C2</color>
+    <color name="on_tertiary">#FFFFFF</color>
+    
+    <!-- 背景色 -->
+    <color name="background">#0F1419</color>
+    <color name="surface">#1A1F29</color>
+    <color name="surface_variant">#2D3543</color>
+    <color name="on_surface">#E0E1DD</color>
+    <color name="on_surface_variant">#C4C7C5</color>
+    
+    <!-- 状态色 -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FFC107</color>
+    <color name="error">#F44336</color>
+    
+    <!-- 透明色 -->
+    <color name="transparent">#00000000</color>
+    <color name="scrim">#80000000</color>
+    
+    <!-- 渐变 -->
+    <color name="gradient_start">#1E88E5</color>
+    <color name="gradient_middle">#42A5F5</color>
+    <color name="gradient_end">#64B5F6</color>
+</resources>
