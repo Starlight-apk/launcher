@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 应用名称 -->
+    <string name="app_name">PKG-BASH</string>
+    
+    <!-- 主界面 -->
+    <string name="welcome">欢迎回来</string>
+    <string name="start_game">开始游戏</string>
+    <string name="downloading">下载中…</string>
+    <string name="installed">已安装</string>
+    <string name="download">下载</string>
+    <string name="install">安装</string>
+    <string name="playing">运行中</string>
+    
+    <!-- 游戏 -->
+    <string name="game_ba">蔚蓝档案：基沃托斯</string>
+    <string name="game_card">卡牌游戏</string>
+    <string name="game_developing">开发中</string>
+    <string name="game_size_ba">约 950 MB</string>
+    <string name="game_size_card">待定</string>
+    
+    <!-- 权限 -->
+    <string name="permission_required">需要权限</string>
+    <string name="permission_storage">需要存储权限来下载和管理游戏文件</string>
+    <string name="permission_manage">需要所有文件访问权限</string>
+    <string name="grant">授权</string>
+    <string name="deny">拒绝</string>
+    
+    <!-- 安装 -->
+    <string name="install_java">安装 Java 环境</string>
+    <string name="install_java_desc">游戏需要 Java 21 运行环境 (约 50MB)</string>
+    <string name="install_agree">同意并安装</string>
+    <string name="install_cancel">取消</string>
+    <string name="installing">正在安装…</string>
+    <string name="install_complete">安装完成</string>
+    
+    <!-- 下载 -->
+    <string name="downloading_game">正在下载游戏</string>
+    <string name="download_complete">下载完成</string>
+    <string name="download_failed">下载失败</string>
+    <string name="verifying">验证文件中…</string>
+    
+    <!-- 设置 -->
+    <string name="settings">设置</string>
+    <string name="settings_java">Java 路径</string>
+    <string name="settings_game">游戏管理</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_version">版本 1.0.0</string>
+    
+    <!-- 错误 -->
+    <string name="error_network">网络错误</string>
+    <string name="error_storage">存储错误</string>
+    <string name="error_java">Java 环境错误</string>
+    <string name="error_unknown">未知错误</string>
+    
+    <!-- 提示 -->
+    <string name="tip_first_launch">欢迎使用 PKG-BASH 启动器</string>
+    <string name="tip_download">点击下载按钮开始下载游戏</string>
+    <string name="tip_install_java">首次使用需要安装 Java 环境</string>
+</resources>

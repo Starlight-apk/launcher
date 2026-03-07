@@ -1,0 +1,213 @@
+# GitHub Actions 构建配置
+# PKG-BASH Launcher 自动编译 APK 并发布 Release
+
+name: Build APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:  # 允许手动触发
+
+env:
+  APP_NAME: PKG-BASH-Launcher
+  APP_VERSION: 1.0.0
+
+jobs:
+  build:
+    name: 构建 APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 允许上传 Release
+      actions: read
+
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      build_time: ${{ steps.get_version.outputs.build_time }}
+
+    steps:
+      # 1. 检出代码
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. 设置 JDK 17
+      - name: 设置 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      # 3. 设置 Gradle
+      - name: 设置 Gradle
+        uses: gradle/gradle-build-action@v3
+
+      # 4. 授予 Gradle 执行权限
+      - name: 授予 Gradle 执行权限
+        run: chmod +x ./gradlew
+
+      # 5. 获取版本信息
+      - name: 获取版本信息
+        id: get_version
+        run: |
+          VERSION_NAME=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts || echo "1.0.0")
+          BUILD_TIME=$(date +"%Y%m%d_%H%M%S")
+          echo "version=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "build_time=$BUILD_TIME" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION_NAME"
+          echo "Build Time: $BUILD_TIME"
+
+      # 6. 构建 Debug APK
+      - name: 构建 Debug APK
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+
+      # 7. 构建 Release APK
+      - name: 构建 Release APK
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+
+      # 8. 重命名 APK 文件
+      - name: 重命名 APK 文件
+        run: |
+          mkdir -p apk-output
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             apk-output/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-debug.apk
+          cp app/build/outputs/apk/release/app-release-unsigned.apk \
+             apk-output/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-release-unsigned.apk
+          
+          echo "APK 文件已准备："
+          ls -lh apk-output/
+
+      # 9. 上传 Debug APK 为 Artifact
+      - name: 上传 Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-Debug-v${{ steps.get_version.outputs.version }}
+          path: apk-output/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-debug.apk
+          retention-days: 30
+
+      # 10. 上传 Release APK 为 Artifact
+      - name: 上传 Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-Release-v${{ steps.get_version.outputs.version }}
+          path: apk-output/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-release-unsigned.apk
+          retention-days: 30
+
+      # 11. 创建 GitHub Release (仅当推送标签时)
+      - name: 创建 GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            apk-output/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-debug.apk
+            apk-output/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-release-unsigned.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 12. 自动创建 Release (每次 push 到 main)
+      - name: 自动创建 Pre-release
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: auto-build-${{ steps.get_version.outputs.build_time }}
+          name: "🚀 自动构建 ${{ steps.get_version.outputs.build_time }}"
+          body: |
+            ## 📦 自动构建版本
+            
+            **版本**: ${{ steps.get_version.outputs.version }}
+            **构建时间**: ${{ steps.get_version.outputs.build_time }}
+            **提交**: ${{ github.sha }}
+            
+            ### 📥 下载
+            - [Debug 版本](https://github.com/${{ github.repository }}/releases/download/auto-build-${{ steps.get_version.outputs.build_time }}/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-debug.apk)
+            - [Release 版本 (未签名)](https://github.com/${{ github.repository }}/releases/download/auto-build-${{ steps.get_version.outputs.build_time }}/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-release-unsigned.apk)
+            
+            ### ⚠️ 注意事项
+            - Debug 版本可直接安装测试
+            - Release 版本需要签名后才能安装
+            - 此版本为自动构建，可能包含未测试的更改
+          prerelease: true
+          draft: false
+          files: |
+            apk-output/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-debug.apk
+            apk-output/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-release-unsigned.apk
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # 13. 发送通知 (邮件/Webhook)
+      - name: 发送构建通知
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            🔨 PKG-BASH Launcher 构建完成!
+            版本：${{ steps.get_version.outputs.version }}
+            时间：${{ steps.get_version.outputs.build_time }}
+            状态：${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+
+      # 14. 构建完成摘要
+      - name: 构建完成摘要
+        run: |
+          echo "================================"
+          echo "  ✅ PKG-BASH Launcher 构建完成!"
+          echo "================================"
+          echo ""
+          echo "📦 版本：${{ steps.get_version.outputs.version }}"
+          echo "⏰ 时间：${{ steps.get_version.outputs.build_time }}"
+          echo "🔗 提交：${{ github.sha }}"
+          echo ""
+          echo "📁 APK 文件位置:"
+          echo "   - Debug: apk-output/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-debug.apk"
+          echo "   - Release: apk-output/${{ env.APP_NAME }}-v${{ steps.get_version.outputs.version }}-release-unsigned.apk"
+          echo ""
+          echo "📥 下载方式:"
+          echo "   1. 在 GitHub Actions 页面下载 Artifact"
+          echo "   2. 等待 Release 发布 (推送标签时自动发布)"
+          echo "   3. 访问 Releases 页面下载"
+
+  # 可选：邮件通知
+  notify-email:
+    name: 邮件通知
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: 发送邮件通知
+        run: |
+          echo "发送邮件通知..."
+          # 使用 GitHub Actions 内置邮件通知
+          # 或者配置第三方邮件服务
+          
+          # 方案 1: 使用 GitHub 内置通知
+          # GitHub 会自动发送邮件给仓库所有者
+          
+          # 方案 2: 使用 SendGrid (需要配置 Secrets)
+          if [ -n "${{ secrets.SENDGRID_API_KEY }}" ]; then
+            curl -X POST "https://api.sendgrid.com/v3/mail/send" \
+              -H "Authorization: Bearer ${{ secrets.SENDGRID_API_KEY }}" \
+              -H "Content-Type: application/json" \
+              -d '{
+                "personalizations": [{
+                  "to": [{"email": "${{ secrets.NOTIFY_EMAIL }}"}],
+                  "subject": "🔨 PKG-BASH Launcher 构建完成"
+                }],
+                "from": {"email": "notify@pkg-bash.com"},
+                "subject": "PKG-BASH Launcher 构建完成 - ${{ needs.build.outputs.version }}",
+                "content": [{
+                  "type": "text/plain",
+                  "value": "构建版本：${{ needs.build.outputs.version }}\n构建时间：${{ needs.build.outputs.build_time }}\n构建状态：${{ needs.build.result }}\n\n请在 GitHub 查看：https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }]
+              }' || echo "邮件发送失败 (可能未配置)"
+          else
+            echo "未配置邮件服务，跳过邮件通知"
+          fi
